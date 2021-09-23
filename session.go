@@ -85,7 +85,7 @@ func (c *Session) onWeather() error {
 }
 
 func (c *Session) onGetToken() error {
-	usageStr := fmt.Sprintf(`curl -X POST http://`+*advisoryAddr+`/post `+
+	usageStr := fmt.Sprintf(`curl -X POST `+*advisoryAddr+`/post `+
 		`-d '{"token":"%s","msg":"*Hello* World"}'`, c.Token())
 	reply := fmt.Sprintf("Your Token:\n"+c.Token()+"\nPlease don't share...😈\nHave a try:\n  %s", usageStr)
 	return c.SendPlainText(reply)
