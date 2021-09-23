@@ -74,5 +74,6 @@ func main() {
 			sm.PutSession(sess)
 		}
 		sess.Handle(update.Message.Text)
+		sm.AddToUpdateQueue(sess)
 	}
 }

@@ -11,6 +11,7 @@ import (
 
 var (
 	httpServerAddr = flag.String("http-endpoint", ":8089", "http server endpoint")
+	advisoryAddr   = flag.String("advisory-addr", "http://127.0.0.1:8089", "advisory address, will show in usage text")
 )
 
 type Req struct {

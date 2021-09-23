@@ -72,7 +72,7 @@ func (c *Session) Handle(msg string) error {
 		err = c.onGetToken()
 	} else if msg == "/stop" {
 		c.Stop()
-		c.SendPlainText("well, your call.")
+		c.SendPlainText("not implemented")
 	} else {
 		err = c.onUsage()
 	}
@@ -85,8 +85,8 @@ func (c *Session) onWeather() error {
 }
 
 func (c *Session) onGetToken() error {
-	usageStr := fmt.Sprintf(`curl -X POST http://127.0.0.1:8089/post `+
-		`-d '{"token":"%s","msg":"Hello World"}'`, c.Token())
+	usageStr := fmt.Sprintf(`curl -X POST http://`+*advisoryAddr+`/post `+
+		`-d '{"token":"%s","msg":"*Hello* World"}'`, c.Token())
 	reply := fmt.Sprintf("Your Token:\n"+c.Token()+"\nPlease don't share...😈\nHave a try:\n  %s", usageStr)
 	return c.SendPlainText(reply)
 }
@@ -95,6 +95,7 @@ func (c *Session) onUsage() error {
 }
 
 func (c *Session) onRun() error {
+	c.SendPlainText("not implemented")
 	return nil
 }
 
@@ -152,7 +153,7 @@ func (sm *SessionMgr) GetSessionByChatID(chatID int64) (*Session, bool) {
 	return sm.sessionModelToSessionObj(&model), true
 }
 
-func (sm *SessionMgr) addToUpdateQueue(s *Session) {
+func (sm *SessionMgr) AddToUpdateQueue(s *Session) {
 	// TODO may block
 	sm.updateQ <- s
 }
