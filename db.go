@@ -19,10 +19,11 @@ var (
 type SessionModel struct {
 	gorm.Model
 
-	ChatID   int64 ``
-	Token    string
-	From     string
-	CreateAt time.Time
+	ChatID       int64  `gorm:"unique_index;not null"`
+	Token        string `gorm:"index:idx_token"`
+	From         string `gorm:"index:idx_from"`
+	CreateAt     time.Time
+	LastUpdateAt time.Time
 }
 
 var (

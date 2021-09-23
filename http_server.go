@@ -19,7 +19,15 @@ type Req struct {
 	Tp      string `json:"type"`
 }
 
-func serveHttp() {
+type HttpServer struct {
+	sm *SessionMgr
+}
+
+func NewHttpServer(sm *SessionMgr) *HttpServer {
+	return &HttpServer{sm}
+}
+
+func (s *HttpServer) Serve() {
 	router := gin.Default()
 
 	router.POST("/post", func(c *gin.Context) {
@@ -35,7 +43,7 @@ func serveHttp() {
 			return
 		}
 		// get session by chat id, if not exists create one
-		sess, ok := SM().GetSessionByToken(req.Token)
+		sess, ok := s.sm.GetSessionByToken(req.Token)
 		if ok {
 			sess.SendMarkdown(req.Message)
 		}

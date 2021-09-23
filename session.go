@@ -2,7 +2,7 @@ package main
 
 import (
 	"fmt"
-	"sync"
+	"log"
 	"sync/atomic"
 	"time"
 
@@ -31,6 +31,7 @@ type Session struct {
 	createAt   time.Time
 	lastUpdate time.Time
 
+	// TODO
 	recentConversation []Message
 }
 
@@ -54,12 +55,16 @@ func (c *Session) ChatID() int64                  { return c.chatID }
 func (c *Session) From() string                   { return c.from }
 func (c *Session) SendPlainText(msg string) error { return c.bot.SendPlainText(c.chatID, msg) }
 func (c *Session) SendMarkdown(msg string) error  { return c.bot.SendMarkdown(c.chatID, msg) }
+func (c *Session) Save() error                    { return PutOrUpdate(c.Model()) }
 
 func (c *Session) Handle(msg string) error {
 	var err error
 	if msg == "/weather" {
 		err = c.onWeather()
 	} else if msg == "/start" {
+		if err != nil {
+			log.Println(err)
+		}
 		err = c.onUsage()
 	} else if msg == "/run" {
 		err = c.onRun()
@@ -71,6 +76,7 @@ func (c *Session) Handle(msg string) error {
 	} else {
 		err = c.onUsage()
 	}
+	c.lastUpdate = time.Now()
 	return err
 }
 
@@ -84,19 +90,11 @@ func (c *Session) onGetToken() error {
 	reply := fmt.Sprintf("Your Token:\n"+c.Token()+"\nPlease don't share...😈\nHave a try:\n  %s", usageStr)
 	return c.SendPlainText(reply)
 }
-
 func (c *Session) onUsage() error {
-	return c.SendPlainText("hello")
+	return c.SendPlainText("Usage:\n/run\n/stop\n/token")
 }
 
 func (c *Session) onRun() error {
-	go func() {
-		for !c.IsStop() {
-			c.SendPlainText("mock")
-			c.lastUpdate = time.Now()
-			time.Sleep(1 * time.Second)
-		}
-	}()
 	return nil
 }
 
@@ -109,72 +107,59 @@ func (s *Session) Model() *SessionModel {
 	}
 }
 
-func (s *Session) Persist() error {
+type SessionMgr struct {
+	bot     Bot
+	updateQ chan *Session
+}
+
+func NewSessionManager(bot Bot) *SessionMgr {
+	return &SessionMgr{
+		bot:     bot,
+		updateQ: make(chan *Session, 100),
+	}
+}
+
+func (sm *SessionMgr) sessionModelToSessionObj(model *SessionModel) *Session {
+	return &Session{
+		chatID:     model.ChatID,
+		from:       model.From,
+		token:      model.Token,
+		createAt:   model.CreateAt,
+		lastUpdate: model.LastUpdateAt,
+		bot:        sm.bot,
+	}
+}
+
+func (sm *SessionMgr) PutSession(s *Session) error {
 	return PutOrUpdate(s.Model())
 }
 
-var (
-	_sessionManager *SessionMgr
-	_once           sync.Once
-)
-
-func SM() *SessionMgr {
-	_once.Do(func() {
-		_sessionManager = &SessionMgr{
-			chatTosession:  make(map[int64]*Session),
-			tokenToSession: make(map[string]*Session),
-		}
-	})
-	return _sessionManager
-}
-
-type SessionMgr struct {
-	mu             sync.RWMutex
-	chatTosession  map[int64]*Session
-	tokenToSession map[string]*Session
-}
-
-func (sm *SessionMgr) PutSession(chatID int64, s *Session) {
-	sm.mu.Lock()
-	defer sm.mu.Unlock()
-	sm.chatTosession[chatID] = s
-	sm.tokenToSession[s.Token()] = s
-}
-
 func (sm *SessionMgr) GetSessionByToken(token string) (*Session, bool) {
-	sm.mu.RLock()
-	defer sm.mu.RUnlock()
-	if s, ok := sm.tokenToSession[token]; ok {
-		return s, true
+	var model SessionModel
+	DB().First(&model, "token = ?", token)
+	if DB().Error != nil {
+		return nil, false
 	}
-	return nil, false
+	return sm.sessionModelToSessionObj(&model), true
 }
 
 func (sm *SessionMgr) GetSessionByChatID(chatID int64) (*Session, bool) {
-	sm.mu.RLock()
-	defer sm.mu.RUnlock()
-	if s, ok := sm.chatTosession[chatID]; ok {
-		return s, true
+	var model SessionModel
+	db := DB().First(&model, "chat_id = ?", chatID)
+	if db.Error != nil {
+		return nil, false
 	}
-	return nil, false
+	return sm.sessionModelToSessionObj(&model), true
 }
 
-func (sm *SessionMgr) RemoveSessionByChatID(chatID int64) {
-	sm.mu.Lock()
-	defer sm.mu.Unlock()
-	if s, ok := sm.chatTosession[chatID]; ok {
-		token := s.Token()
-		delete(sm.tokenToSession, token)
-		delete(sm.chatTosession, chatID)
-	}
+func (sm *SessionMgr) addToUpdateQueue(s *Session) {
+	// TODO may block
+	sm.updateQ <- s
 }
 
-func (sm *SessionMgr) RemoveSessionbyToken(token string) {
-	sm.mu.Lock()
-	defer sm.mu.Unlock()
-	if s, ok := sm.tokenToSession[token]; ok {
-		chatID := s.ChatID()
-		delete(sm.tokenToSession, token)
-		delete(sm.chatTosession, chatID)
+func (sm *SessionMgr) updateSessionWorker() {
+	// TODO use batch
+	for s := range sm.updateQ {
+		s.Save()
 	}
 }

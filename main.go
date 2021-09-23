@@ -53,8 +53,10 @@ func main() {
 	u.Timeout = TG_API_POLL_TIMEOUT
 	updates, _ := bot.GetUpdatesChan(u)
 	botWrapper := &TgBot{bot}
+	sm := NewSessionManager(botWrapper)
 
-	go serveHttp()
+	httpServer := NewHttpServer(sm)
+	go httpServer.Serve()
 	// start polling
 	for update := range updates {
 		if update.Message == nil { // ignore any non-Message Updates
@@ -65,10 +67,11 @@ func main() {
 		}
 		chatID := update.Message.Chat.ID
 		// get session by chat id, if not exists create one
-		sess, ok := SM().GetSessionByChatID(chatID)
+		// TODO: add cache here
+		sess, ok := sm.GetSessionByChatID(chatID)
 		if !ok {
 			sess = NewSession(chatID, update.Message.From.UserName, botWrapper)
-			SM().PutSession(sess.chatID, sess)
+			sm.PutSession(sess)
 		}
 		sess.Handle(update.Message.Text)
 	}
