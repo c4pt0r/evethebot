@@ -8,4 +8,6 @@ require (
 	github.com/google/uuid v1.3.0
 	github.com/jinzhu/gorm v1.9.16
 	github.com/technoweenie/multipartstreamer v1.0.1 // indirect
+	gorm.io/driver/sqlite v1.1.5
+	gorm.io/gorm v1.21.15
 )
