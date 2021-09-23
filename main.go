@@ -24,8 +24,15 @@ type TgBot struct {
 	bot *tgbotapi.BotAPI
 }
 
-func (b *TgBot) Send(chatID int64, m string) error {
+func (b *TgBot) SendPlainText(chatID int64, m string) error {
 	msg := tgbotapi.NewMessage(chatID, m)
+	_, err := b.bot.Send(msg)
+	return err
+}
+
+func (b *TgBot) SendMarkdown(chatID int64, m string) error {
+	msg := tgbotapi.NewMessage(chatID, m)
+	msg.ParseMode = "markdown"
 	_, err := b.bot.Send(msg)
 	return err
 }
@@ -60,7 +67,7 @@ func main() {
 		// get session by chat id, if not exists create one
 		sess, ok := SM().GetSessionByChatID(chatID)
 		if !ok {
-			sess = NewSession(chatID, botWrapper)
+			sess = NewSession(chatID, update.Message.From.UserName, botWrapper)
 			SM().PutSession(sess.chatID, sess)
 		}
 		sess.Handle(update.Message.Text)

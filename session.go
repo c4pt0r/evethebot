@@ -10,7 +10,8 @@ import (
 )
 
 type Bot interface {
-	Send(chatID int64, msg string) error
+	SendPlainText(chatID int64, msg string) error
+	SendMarkdown(chatID int64, md string) error
 }
 
 type Message struct {
@@ -25,6 +26,7 @@ type Session struct {
 	stopFlag   int32
 	chatID     int64
 	token      string
+	from       string
 	bot        Bot
 	createAt   time.Time
 	lastUpdate time.Time
@@ -32,53 +34,83 @@ type Session struct {
 	recentConversation []Message
 }
 
-func NewSession(chatID int64, bot Bot) *Session {
+func NewSession(chatID int64, from string, bot Bot) *Session {
 	u := uuid.New()
 	token := u.String()
 	return &Session{
 		stopFlag: 0,
 		bot:      bot,
 		chatID:   chatID,
+		from:     from,
 		token:    token,
 		createAt: time.Now(),
 	}
 }
 
-func (c *Session) IsStop() bool {
-	if atomic.LoadInt32(&(c.stopFlag)) != 0 {
-		return true
-	}
-	return false
-}
-
-func (c *Session) Stop()                 { atomic.StoreInt32(&(c.stopFlag), int32(1)) }
-func (c *Session) Token() string         { return c.token }
-func (c *Session) ChatID() int64         { return c.chatID }
-func (c *Session) Send(msg string) error { return c.bot.Send(c.chatID, msg) }
+func (c *Session) Stop()                          { atomic.StoreInt32(&(c.stopFlag), int32(1)) }
+func (c *Session) IsStop() bool                   { return atomic.LoadInt32(&(c.stopFlag)) != 0 }
+func (c *Session) Token() string                  { return c.token }
+func (c *Session) ChatID() int64                  { return c.chatID }
+func (c *Session) From() string                   { return c.from }
+func (c *Session) SendPlainText(msg string) error { return c.bot.SendPlainText(c.chatID, msg) }
+func (c *Session) SendMarkdown(msg string) error  { return c.bot.SendMarkdown(c.chatID, msg) }
 
 func (c *Session) Handle(msg string) error {
 	var err error
 	if msg == "/weather" {
-		err = c.bot.Send(c.chatID, "sunny")
+		err = c.onWeather()
 	} else if msg == "/start" {
-		go func() {
-			for !c.IsStop() {
-				c.Send("mock")
-				c.lastUpdate = time.Now()
-				time.Sleep(1 * time.Second)
-			}
-		}()
+		err = c.onUsage()
+	} else if msg == "/run" {
+		err = c.onRun()
 	} else if msg == "/token" {
-		usageStr := fmt.Sprintf(`curl -X POST http://127.0.0.1:8089/post `+
-			`-d '{"token":"%s","msg":"Hello World"}'`, c.Token())
-		reply := fmt.Sprintf("Your Token: "+c.Token()+"\nPlease don't share...😈\nHave a try:\n  %s", usageStr)
-		err = c.Send(reply)
+		err = c.onGetToken()
 	} else if msg == "/stop" {
 		c.Stop()
+		c.SendPlainText("well, your call.")
 	} else {
-		err = c.Send("Usage: /weathe /token /revoke_token /stop /start /status")
+		err = c.onUsage()
 	}
 	return err
+}
+
+func (c *Session) onWeather() error {
+	return c.SendPlainText("☀️⛈️❄️")
+}
+
+func (c *Session) onGetToken() error {
+	usageStr := fmt.Sprintf(`curl -X POST http://127.0.0.1:8089/post `+
+		`-d '{"token":"%s","msg":"Hello World"}'`, c.Token())
+	reply := fmt.Sprintf("Your Token:\n"+c.Token()+"\nPlease don't share...😈\nHave a try:\n  %s", usageStr)
+	return c.SendPlainText(reply)
+}
+
+func (c *Session) onUsage() error {
+	return c.SendPlainText("hello")
+}
+
+func (c *Session) onRun() error {
+	go func() {
+		for !c.IsStop() {
+			c.SendPlainText("mock")
+			c.lastUpdate = time.Now()
+			time.Sleep(1 * time.Second)
+		}
+	}()
+	return nil
+}
+
+func (s *Session) Model() *SessionModel {
+	return &SessionModel{
+		ChatID:   s.chatID,
+		Token:    s.token,
+		From:     s.from,
+		CreateAt: s.createAt,
+	}
+}
+
+func (s *Session) Persist() error {
+	return PutOrUpdate(s.Model())
 }
 
 var (

@@ -37,7 +37,7 @@ func serveHttp() {
 		// get session by chat id, if not exists create one
 		sess, ok := SM().GetSessionByToken(req.Token)
 		if ok {
-			sess.Send(req.Message)
+			sess.SendMarkdown(req.Message)
 		}
 	})
 	router.Run(*httpServerAddr)

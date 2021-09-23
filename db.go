@@ -9,6 +9,7 @@ import (
 	_ "github.com/jinzhu/gorm/dialects/sqlite"
 	"gorm.io/driver/sqlite"
 	"gorm.io/gorm"
+	"gorm.io/gorm/clause"
 )
 
 var (
@@ -47,5 +48,6 @@ func DB() *gorm.DB {
 }
 
 func PutOrUpdate(m *SessionModel) error {
-	return nil
+	DB().Clauses(clause.OnConflict{DoNothing: true}).Create(m)
+	return DB().Error
 }
