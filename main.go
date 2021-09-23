@@ -1,10 +1,19 @@
 package main
 
 import (
+	"flag"
 	"log"
 	"os"
 
 	tgbotapi "github.com/go-telegram-bot-api/telegram-bot-api"
+)
+
+var (
+	debugMode = flag.Bool("debug", false, "debug mode")
+)
+
+const (
+	TG_API_POLL_TIMEOUT = 60 // in second
 )
 
 func getTgToken() string {
@@ -22,47 +31,38 @@ func (b *TgBot) Send(chatID int64, m string) error {
 }
 
 func main() {
+	flag.Parse()
+
 	bot, err := tgbotapi.NewBotAPI(getTgToken())
 	if err != nil {
 		log.Fatal(err)
 	}
 
-	bot.Debug = true
+	bot.Debug = *debugMode
 
 	log.Printf("[Success] Authorized on account %s", bot.Self.UserName)
 
 	u := tgbotapi.NewUpdate(0)
-	u.Timeout = 60
-
+	u.Timeout = TG_API_POLL_TIMEOUT
 	updates, _ := bot.GetUpdatesChan(u)
-
 	botWrapper := &TgBot{bot}
 
 	go serveHttp()
-
+	// start polling
 	for update := range updates {
 		if update.Message == nil { // ignore any non-Message Updates
 			continue
 		}
-
-		log.Printf("[%s|%s] %s", update.Message.Chat.Type, update.Message.From.UserName, update.Message.Text)
-
-		// ignore group message
 		if update.Message.Chat.Type != "private" {
 			continue
 		}
-
 		chatID := update.Message.Chat.ID
-
 		// get session by chat id, if not exists create one
 		sess, ok := SM().GetSessionByChatID(chatID)
 		if !ok {
 			sess = NewSession(chatID, botWrapper)
 			SM().PutSession(sess.chatID, sess)
 		}
-
 		sess.Handle(update.Message.Text)
-
-		//msg := tgbotapi.NewMessage(update.Message.Chat.ID, conv.Token()+"\n Don't share to others, 🤐")
 	}
 }

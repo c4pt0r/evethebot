@@ -2,10 +2,15 @@ package main
 
 import (
 	"encoding/json"
+	"flag"
 	"io/ioutil"
 	"log"
 
 	"github.com/gin-gonic/gin"
+)
+
+var (
+	httpServerAddr = flag.String("http-endpoint", ":8089", "http server endpoint")
 )
 
 type Req struct {
@@ -29,13 +34,11 @@ func serveHttp() {
 			log.Println(err)
 			return
 		}
-
 		// get session by chat id, if not exists create one
 		sess, ok := SM().GetSessionByToken(req.Token)
 		if ok {
 			sess.Send(req.Message)
 		}
-
 	})
-	router.Run(":8089")
+	router.Run(*httpServerAddr)
 }
