@@ -1,2 +1,2 @@
 # evethebot
-a dumb tg bot
+a dumb telegram bot
