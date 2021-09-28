@@ -21,7 +21,6 @@ f.close()
 
 res = json.loads(body)
 
-
 output = '*💰BTC Price (To USDT)*\n\n'
 for k,v in res.items():
     output += '*' + k + '*' + ': ' + str(v) + '\n'
