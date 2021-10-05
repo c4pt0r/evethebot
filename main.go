@@ -2,8 +2,9 @@ package main
 
 import (
 	"flag"
-	"log"
 	"os"
+
+	"github.com/c4pt0r/log"
 
 	tgbotapi "github.com/go-telegram-bot-api/telegram-bot-api"
 )
@@ -47,7 +48,7 @@ func main() {
 
 	bot.Debug = *debugMode
 
-	log.Printf("[Success] Authorized on account %s", bot.Self.UserName)
+	log.I("[Success] Authorized on account", bot.Self.UserName)
 
 	u := tgbotapi.NewUpdate(0)
 	u.Timeout = TG_API_POLL_TIMEOUT
@@ -64,6 +65,9 @@ func main() {
 		}
 		if update.Message.Chat.Type != "private" {
 			continue
+		}
+		for _, p := range *update.Message.Photo {
+			log.D(p)
 		}
 		chatID := update.Message.Chat.ID
 		// get session by chat id, if not exists create one
