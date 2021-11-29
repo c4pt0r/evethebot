@@ -89,6 +89,16 @@ func (c *Session) Handle(msgJson []byte) error {
 	return err
 }
 
+// TODO: add filters, like limit/column
+func (c *Session) GetMessages() []MessageModel {
+	msgs, err := Fetch(MessageModel{}, "token = ?", c.token)
+	if err != nil {
+		log.E(err)
+		return nil
+	}
+	return msgs.([]MessageModel)
+}
+
 func (c *Session) onWeather() error {
 	return c.SendPlainText("☀️⛈️❄️")
 }

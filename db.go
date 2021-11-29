@@ -19,6 +19,10 @@ var (
 	mysqlDSN = flag.String("mysql", "", "mysql dsn")
 )
 
+var (
+	ErrUnknownModel = errors.New("unknown model")
+)
+
 type SessionModel struct {
 	gorm.Model
 
@@ -77,5 +81,19 @@ func PutModel(m interface{}) error {
 	case *MessageModel:
 		return DB().Clauses(clause.OnConflict{DoNothing: true}).Create(v).Error
 	}
-	return errors.New("no such model")
+	return ErrUnknownModel
+}
+
+// TODO
+func Fetch(m interface{}, conds ...interface{}) (interface{}, error) {
+	switch m.(type) {
+	case MessageModel:
+		var ret []MessageModel
+		err := DB().Limit(100).Order("create_at asc").Find(&ret, conds...).Error
+		if err != nil {
+			return nil, err
+		}
+		return ret, nil
+	}
+	return nil, ErrUnknownModel
 }

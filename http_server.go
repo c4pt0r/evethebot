@@ -6,6 +6,7 @@ import (
 	"flag"
 	"io/ioutil"
 
+	"github.com/c4pt0r/log"
 	"github.com/gin-gonic/gin"
 )
 
@@ -64,10 +65,15 @@ func (s *HttpServer) Serve() {
 			c.AbortWithError(500, err)
 			return
 		}
-		_, ok := s.sm.GetSessionByToken(req.Token)
+		sess, ok := s.sm.GetSessionByToken(req.Token)
 		if !ok {
 			c.AbortWithError(404, errors.New("no such chat"))
 			return
+		}
+		log.I("Get message for session", sess)
+		msgs := sess.GetMessages()
+		if len(msgs) > 0 {
+			c.JSON(200, msgs)
 		}
 	})
 	router.Run(*httpServerAddr)
