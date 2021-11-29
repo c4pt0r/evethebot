@@ -1,25 +1,19 @@
 package main
 
 import (
+	"bytes"
+	"encoding/json"
 	"fmt"
-	"log"
 	"sync/atomic"
 	"time"
 
+	"github.com/c4pt0r/log"
 	"github.com/google/uuid"
 )
 
 type Bot interface {
 	SendPlainText(chatID int64, msg string) error
 	SendMarkdown(chatID int64, md string) error
-}
-
-type Message struct {
-	ChatID   int64
-	From     string
-	To       string
-	Content  string
-	CreateAt time.Time
 }
 
 type Session struct {
@@ -30,21 +24,19 @@ type Session struct {
 	bot        Bot
 	createAt   time.Time
 	lastUpdate time.Time
-
-	// TODO
-	recentConversation []Message
 }
 
 func NewSession(chatID int64, from string, bot Bot) *Session {
 	u := uuid.New()
 	token := u.String()
 	return &Session{
-		stopFlag: 0,
-		bot:      bot,
-		chatID:   chatID,
-		from:     from,
-		token:    token,
-		createAt: time.Now(),
+		stopFlag:   0,
+		chatID:     chatID,
+		token:      token,
+		from:       from,
+		bot:        bot,
+		createAt:   time.Now(),
+		lastUpdate: time.Now(),
 	}
 }
 
@@ -57,26 +49,43 @@ func (c *Session) SendPlainText(msg string) error { return c.bot.SendPlainText(c
 func (c *Session) SendMarkdown(msg string) error  { return c.bot.SendMarkdown(c.chatID, msg) }
 func (c *Session) Save() error                    { return PutOrUpdate(c.Model()) }
 
-func (c *Session) Handle(msg string) error {
+func (c *Session) Handle(msgJson []byte) error {
+	m := make(map[string]interface{})
+	decoder := json.NewDecoder(bytes.NewReader(msgJson))
+	decoder.UseNumber()
+	decoder.Decode(&m)
+
 	var err error
-	if msg == "/weather" {
-		err = c.onWeather()
-	} else if msg == "/start" {
-		if err != nil {
-			log.Println(err)
+	data, ok := m["text"]
+	if ok {
+		msg := data.(string)
+		if msg == "/start" {
+			err = c.onUsage()
+		} else if msg == "/run" {
+			err = c.onRun()
+		} else if msg == "/token" {
+			err = c.onGetToken()
+		} else if msg == "/stop" {
+			c.Stop()
+			c.SendPlainText("not implemented")
+		} else if msg == "/help" {
+			err = c.onUsage()
+		} else {
+			err = c.onUsage()
 		}
-		err = c.onUsage()
-	} else if msg == "/run" {
-		err = c.onRun()
-	} else if msg == "/token" {
-		err = c.onGetToken()
-	} else if msg == "/stop" {
-		c.Stop()
-		c.SendPlainText("not implemented")
-	} else {
-		err = c.onUsage()
 	}
 	c.lastUpdate = time.Now()
+	msgId, ok := m["message_id"]
+	if !ok {
+		log.E("messageID not found, shouldn't be here")
+	}
+	i, err := msgId.(json.Number).Int64()
+	if err != nil {
+		return err
+	}
+
+	text, _ := m["text"]
+	err = c.putMessage(i, text.(string), msgJson)
 	return err
 }
 
@@ -90,6 +99,7 @@ func (c *Session) onGetToken() error {
 	reply := fmt.Sprintf("Your Token:\n"+c.Token()+"\nPlease don't share...😈\nHave a try:\n  %s", usageStr)
 	return c.SendPlainText(reply)
 }
+
 func (c *Session) onUsage() error {
 	return c.SendPlainText("Usage:\n/run\n/stop\n/token")
 }
@@ -99,12 +109,26 @@ func (c *Session) onRun() error {
 	return nil
 }
 
+func (c *Session) putMessage(messageID int64, text string, messageBody []byte) error {
+	mm := &MessageModel{
+		ChatID:      c.chatID,
+		Token:       c.token,
+		From:        c.from,
+		MessageID:   messageID,
+		Text:        text,
+		MessageBody: string(messageBody),
+		CreateAt:    time.Now(),
+	}
+	return PutMessage(mm)
+}
+
 func (s *Session) Model() *SessionModel {
 	return &SessionModel{
-		ChatID:   s.chatID,
-		Token:    s.token,
-		From:     s.from,
-		CreateAt: s.createAt,
+		ChatID:       s.chatID,
+		Token:        s.token,
+		From:         s.from,
+		CreateAt:     s.createAt,
+		LastUpdateAt: s.lastUpdate,
 	}
 }
 

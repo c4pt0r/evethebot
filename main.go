@@ -1,9 +1,11 @@
 package main
 
 import (
+	"encoding/json"
 	"flag"
-	"log"
 	"os"
+
+	"github.com/c4pt0r/log"
 
 	tgbotapi "github.com/go-telegram-bot-api/telegram-bot-api"
 )
@@ -40,14 +42,19 @@ func (b *TgBot) SendMarkdown(chatID int64, m string) error {
 func main() {
 	flag.Parse()
 
+	InitDB()
+
 	bot, err := tgbotapi.NewBotAPI(getTgToken())
 	if err != nil {
 		log.Fatal(err)
 	}
 
 	bot.Debug = *debugMode
+	if *debugMode {
+		log.SetLevelByString("debug")
+	}
 
-	log.Printf("[Success] Authorized on account %s", bot.Self.UserName)
+	log.I("[Success] Authorized on account", bot.Self.UserName)
 
 	u := tgbotapi.NewUpdate(0)
 	u.Timeout = TG_API_POLL_TIMEOUT
@@ -65,15 +72,25 @@ func main() {
 		if update.Message.Chat.Type != "private" {
 			continue
 		}
+
 		chatID := update.Message.Chat.ID
 		// get session by chat id, if not exists create one
-		// TODO: add cache here
 		sess, ok := sm.GetSessionByChatID(chatID)
 		if !ok {
 			sess = NewSession(chatID, update.Message.From.UserName, botWrapper)
 			sm.PutSession(sess)
 		}
-		sess.Handle(update.Message.Text)
+		var msg []byte
+		if *debugMode {
+			msg, err = json.MarshalIndent(update.Message, "", "  ")
+		} else {
+			msg, err = json.Marshal(update.Message)
+		}
+		if err != nil {
+			log.E(err)
+			continue
+		}
+		sess.Handle(msg)
 		sm.AddToUpdateQueue(sess)
 	}
 }

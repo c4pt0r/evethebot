@@ -2,9 +2,9 @@ package main
 
 import (
 	"encoding/json"
+	"errors"
 	"flag"
 	"io/ioutil"
-	"log"
 
 	"github.com/gin-gonic/gin"
 )
@@ -28,25 +28,46 @@ func NewHttpServer(sm *SessionMgr) *HttpServer {
 	return &HttpServer{sm}
 }
 
+func (s *HttpServer) parseReq(c *gin.Context) (Req, error) {
+	var req Req
+	jsonData, err := ioutil.ReadAll(c.Request.Body)
+	if err != nil {
+		return Req{}, err
+	}
+	err = json.Unmarshal(jsonData, &req)
+	if err != nil {
+		return Req{}, err
+	}
+	return req, nil
+}
+
 func (s *HttpServer) Serve() {
 	router := gin.Default()
 
 	router.POST("/post", func(c *gin.Context) {
-		var req Req
-		jsonData, err := ioutil.ReadAll(c.Request.Body)
+		req, err := s.parseReq(c)
 		if err != nil {
-			log.Println(err)
+			c.AbortWithError(500, err)
 			return
 		}
-		err = json.Unmarshal(jsonData, &req)
-		if err != nil {
-			log.Println(err)
-			return
-		}
-		// get session by chat id, if not exists create one
 		sess, ok := s.sm.GetSessionByToken(req.Token)
-		if ok {
-			sess.SendMarkdown(req.Message)
+		if !ok {
+			c.AbortWithError(404, errors.New("no such chat"))
+			return
+		}
+		sess.SendMarkdown(req.Message)
+	})
+
+	router.GET("/message", func(c *gin.Context) {
+		req, err := s.parseReq(c)
+		if err != nil {
+			c.AbortWithError(500, err)
+			return
+		}
+		_, ok := s.sm.GetSessionByToken(req.Token)
+		if !ok {
+			c.AbortWithError(404, errors.New("no such chat"))
+			return
 		}
 	})
 	router.Run(*httpServerAddr)
