@@ -1,6 +1,7 @@
 package main
 
 import (
+	"errors"
 	"flag"
 	"sync"
 	"time"
@@ -57,7 +58,7 @@ func DB() *gorm.DB {
 			log.I("init mysql", *mysqlDSN)
 			_global_db, err = gorm.Open(mysql.Open(*mysqlDSN), &gorm.Config{})
 		} else {
-			log.I("init sqlite", *mysqlDSN)
+			log.I("init sqlite", *dbPath)
 			_global_db, err = gorm.Open(sqlite.Open(*dbPath), &gorm.Config{})
 		}
 		if err != nil {
@@ -69,12 +70,12 @@ func DB() *gorm.DB {
 	return _global_db
 }
 
-func PutOrUpdate(m *SessionModel) error {
-	log.I("Insert Session", m)
-	return DB().Clauses(clause.OnConflict{DoNothing: true}).Create(m).Error
-}
-
-func PutMessage(m *MessageModel) error {
-	log.I("Insert Message", m)
-	return DB().Clauses(clause.OnConflict{DoNothing: true}).Create(m).Error
+func PutModel(m interface{}) error {
+	switch v := m.(type) {
+	case *SessionModel:
+		return DB().Clauses(clause.OnConflict{DoNothing: true}).Create(v).Error
+	case *MessageModel:
+		return DB().Clauses(clause.OnConflict{DoNothing: true}).Create(v).Error
+	}
+	return errors.New("no such model")
 }

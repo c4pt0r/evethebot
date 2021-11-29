@@ -47,7 +47,7 @@ func (c *Session) ChatID() int64                  { return c.chatID }
 func (c *Session) From() string                   { return c.from }
 func (c *Session) SendPlainText(msg string) error { return c.bot.SendPlainText(c.chatID, msg) }
 func (c *Session) SendMarkdown(msg string) error  { return c.bot.SendMarkdown(c.chatID, msg) }
-func (c *Session) Save() error                    { return PutOrUpdate(c.Model()) }
+func (c *Session) Save() error                    { return PutModel(c.Model()) }
 
 func (c *Session) Handle(msgJson []byte) error {
 	m := make(map[string]interface{})
@@ -119,7 +119,7 @@ func (c *Session) putMessage(messageID int64, text string, messageBody []byte) e
 		MessageBody: string(messageBody),
 		CreateAt:    time.Now(),
 	}
-	return PutMessage(mm)
+	return PutModel(mm)
 }
 
 func (s *Session) Model() *SessionModel {
@@ -156,7 +156,7 @@ func (sm *SessionMgr) sessionModelToSessionObj(model *SessionModel) *Session {
 }
 
 func (sm *SessionMgr) PutSession(s *Session) error {
-	return PutOrUpdate(s.Model())
+	return PutModel(s.Model())
 }
 
 func (sm *SessionMgr) GetSessionByToken(token string) (*Session, bool) {
