@@ -22,6 +22,9 @@ Request body:
 }
 ```
 
+Example:
+
+`$ curl -X POST http://0xffff.me:8089/post -d '{"token":"{your token}","msg":"*Hello* World"}'`
 
 2. Get recent messages you sent to your bot
 
@@ -35,6 +38,9 @@ Request body:
     "limit" : 100 // by default
 }
 ```
+Example:
+
+`$ curl -X GET http://127.0.0.1:8089/message -d '{"token":"{your token}"}' | jq .`
 
 # Example
 
