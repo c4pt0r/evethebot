@@ -9,6 +9,7 @@ import (
 
 	"github.com/c4pt0r/log"
 	"github.com/google/uuid"
+	"gorm.io/datatypes"
 )
 
 type Bot interface {
@@ -61,17 +62,12 @@ func (c *Session) Handle(msgJson []byte) error {
 		msg := data.(string)
 		if msg == "/start" {
 			err = c.onUsage()
-		} else if msg == "/run" {
-			err = c.onRun()
 		} else if msg == "/token" {
 			err = c.onGetToken()
-		} else if msg == "/stop" {
-			c.Stop()
-			c.SendPlainText("not implemented")
 		} else if msg == "/help" {
 			err = c.onUsage()
 		} else {
-			err = c.onUsage()
+			c.SendPlainText("OK")
 		}
 	}
 	c.lastUpdate = time.Now()
@@ -79,14 +75,11 @@ func (c *Session) Handle(msgJson []byte) error {
 	if !ok {
 		log.E("messageID not found, shouldn't be here")
 	}
-	i, err := msgId.(json.Number).Int64()
+	messageID, err := msgId.(json.Number).Int64()
 	if err != nil {
 		return err
 	}
-
-	text, _ := m["text"]
-	err = c.putMessage(i, text.(string), msgJson)
-	return err
+	return c.putMessage(messageID, data.(string), msgJson)
 }
 
 // TODO: add filters, like limit/column
@@ -111,12 +104,7 @@ func (c *Session) onGetToken() error {
 }
 
 func (c *Session) onUsage() error {
-	return c.SendPlainText("Usage:\n/run\n/stop\n/token")
-}
-
-func (c *Session) onRun() error {
-	c.SendPlainText("not implemented")
-	return nil
+	return c.SendPlainText("Usage: /token")
 }
 
 func (c *Session) putMessage(messageID int64, text string, messageBody []byte) error {
@@ -126,7 +114,7 @@ func (c *Session) putMessage(messageID int64, text string, messageBody []byte) e
 		From:        c.from,
 		MessageID:   messageID,
 		Text:        text,
-		MessageBody: string(messageBody),
+		MessageBody: datatypes.JSON(messageBody),
 		CreateAt:    time.Now(),
 	}
 	return PutModel(mm)

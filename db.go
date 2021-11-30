@@ -12,6 +12,8 @@ import (
 	"gorm.io/driver/sqlite"
 	"gorm.io/gorm"
 	"gorm.io/gorm/clause"
+
+	"gorm.io/datatypes"
 )
 
 var (
@@ -42,7 +44,7 @@ type MessageModel struct {
 	Text   string
 
 	MessageID   int64
-	MessageBody string    // JSON content, teltegram message format
+	MessageBody datatypes.JSON
 	CreateAt    time.Time `gorm:"index:idx_create_at"`
 }
 
