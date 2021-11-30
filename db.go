@@ -25,6 +25,10 @@ var (
 	ErrUnknownModel = errors.New("unknown model")
 )
 
+const (
+	MaxFetchLimit int = 100
+)
+
 type SessionModel struct {
 	gorm.Model
 
@@ -86,12 +90,16 @@ func PutModel(m interface{}) error {
 	return ErrUnknownModel
 }
 
-// TODO
-func Fetch(m interface{}, conds ...interface{}) (interface{}, error) {
+func Fetch(m interface{}, limit int, conds ...interface{}) (interface{}, error) {
 	switch m.(type) {
 	case MessageModel:
 		var ret []MessageModel
-		err := DB().Limit(100).Order("create_at asc").Find(&ret, conds...).Error
+		var err error
+		if limit > 0 && limit < MaxFetchLimit {
+			err = DB().Limit(limit).Order("create_at asc").Find(&ret, conds...).Error
+		} else {
+			err = DB().Limit(MaxFetchLimit).Order("create_at asc").Find(&ret, conds...).Error
+		}
 		if err != nil {
 			return nil, err
 		}

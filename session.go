@@ -83,8 +83,8 @@ func (c *Session) Handle(msgJson []byte) error {
 }
 
 // TODO: add filters, like limit/column
-func (c *Session) GetMessages() []MessageModel {
-	msgs, err := Fetch(MessageModel{}, "token = ?", c.token)
+func (c *Session) GetMessages(limit int) []MessageModel {
+	msgs, err := Fetch(MessageModel{}, limit, "token = ?", c.token)
 	if err != nil {
 		log.E(err)
 		return nil

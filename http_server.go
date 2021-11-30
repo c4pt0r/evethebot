@@ -15,38 +15,48 @@ var (
 	advisoryAddr   = flag.String("advisory-addr", "http://127.0.0.1:8089", "advisory address, will show in usage text")
 )
 
-type Req struct {
+type PostMessageReq struct {
 	Token   string `json:"token"`
 	Message string `json:"msg"`
 	Tp      string `json:"type"`
+}
+
+type GetMessageReq struct {
+	Token             string `json:"token"`
+	Limit             int    `json:"limit"`
+	LastSeenMessageID int    `json:"last_message_id"`
 }
 
 type HttpServer struct {
 	sm *SessionMgr
 }
 
-func NewHttpServer(sm *SessionMgr) *HttpServer {
-	return &HttpServer{sm}
+type Req interface {
+	type PostMessageReq, GetMessageReq
 }
 
-func (s *HttpServer) parseReq(c *gin.Context) (Req, error) {
-	var req Req
+func parseReq[T Req](c *gin.Context) (*T, error) {
+	req := new(T)
 	jsonData, err := ioutil.ReadAll(c.Request.Body)
 	if err != nil {
-		return Req{}, err
+		return nil, err
 	}
 	err = json.Unmarshal(jsonData, &req)
 	if err != nil {
-		return Req{}, err
+		return nil, err
 	}
 	return req, nil
+}
+
+func NewHttpServer(sm *SessionMgr) *HttpServer {
+	return &HttpServer{sm}
 }
 
 func (s *HttpServer) Serve() {
 	router := gin.Default()
 
 	router.POST("/post", func(c *gin.Context) {
-		req, err := s.parseReq(c)
+		req, err := parseReq[PostMessageReq](c)
 		if err != nil {
 			c.AbortWithError(500, err)
 			return
@@ -60,7 +70,7 @@ func (s *HttpServer) Serve() {
 	})
 
 	router.GET("/message", func(c *gin.Context) {
-		req, err := s.parseReq(c)
+		req, err := parseReq[GetMessageReq](c)
 		if err != nil {
 			c.AbortWithError(500, err)
 			return
@@ -71,7 +81,7 @@ func (s *HttpServer) Serve() {
 			return
 		}
 		log.I("Get message for session", sess)
-		msgs := sess.GetMessages()
+		msgs := sess.GetMessages(100)
 		if len(msgs) > 0 {
 			c.JSON(200, msgs)
 		}
