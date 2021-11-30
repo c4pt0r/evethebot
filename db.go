@@ -32,8 +32,8 @@ const (
 type SessionModel struct {
 	gorm.Model
 
-	ChatID       int64  `gorm:"unique_index;not null"`
-	Token        string `gorm:"index:idx_session_token"`
+	ChatID       int64  `gorm:"index:,unique"`
+	Token        string `gorm:"index:,unique,length:50"`
 	From         string `gorm:"index:idx_session_from"`
 	CreateAt     time.Time
 	LastUpdateAt time.Time
@@ -83,7 +83,7 @@ func DB() *gorm.DB {
 func PutModel(m interface{}) error {
 	switch v := m.(type) {
 	case *SessionModel:
-		return DB().Clauses(clause.OnConflict{DoNothing: true}).Create(v).Error
+		return DB().Clauses(clause.OnConflict{UpdateAll: true}).Create(v).Error
 	case *MessageModel:
 		return DB().Clauses(clause.OnConflict{DoNothing: true}).Create(v).Error
 	}

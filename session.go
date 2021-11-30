@@ -135,10 +135,12 @@ type SessionMgr struct {
 }
 
 func NewSessionManager(bot Bot) *SessionMgr {
-	return &SessionMgr{
+	mgr := &SessionMgr{
 		bot:     bot,
 		updateQ: make(chan *Session, 100),
 	}
+	go mgr.updateSessionWorker()
+	return mgr
 }
 
 func (sm *SessionMgr) sessionModelToSessionObj(model *SessionModel) *Session {
@@ -182,6 +184,7 @@ func (sm *SessionMgr) AddToUpdateQueue(s *Session) {
 func (sm *SessionMgr) updateSessionWorker() {
 	// TODO use batch
 	for s := range sm.updateQ {
+		log.D("save session")
 		s.Save()
 	}
 }
