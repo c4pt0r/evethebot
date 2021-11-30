@@ -7,8 +7,11 @@ const (
 	FormatMarkdown
 )
 
+type Poller interface{}
+
 type Bot interface {
 	Send(chatID int64, replyMsgID int, msg string, tp TextFormatType) error
+	// TODO: add poller api
 }
 
 type TgBot struct {
