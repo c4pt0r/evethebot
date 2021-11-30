@@ -40,3 +40,11 @@ Request body:
 
 Add @eve_is_not_a_bot  :)
 
+# So? What can we do?
+
+I put some examples in demo directory.
+
+1. A BTC-USD pricing live broadcast bot (with the help of crontab)
+2. A Hackernews bot, notify you when news appears on the HN front page for a specific keyword.
+
+
