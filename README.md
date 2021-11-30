@@ -1,6 +1,6 @@
 # evethebot
 
-A dumb telegram bot, using TiDB Cloud as backend storage
+A dumb telegram bot, using [TiDB Cloud](https://tidbcloud.com) as backend storage
 
 # Usage
 
