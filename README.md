@@ -1,6 +1,6 @@
 # evethebot
 
-A dumb telegram bot.
+A handy telegram bot for building other bots
 
 # Usage
 
