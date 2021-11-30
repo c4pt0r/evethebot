@@ -12,10 +12,7 @@ import (
 	"gorm.io/datatypes"
 )
 
-type Bot interface {
-	SendPlainText(chatID int64, msg string) error
-	SendMarkdown(chatID int64, md string) error
-}
+type TextFormatType int
 
 type Session struct {
 	stopFlag   int32
@@ -41,14 +38,16 @@ func NewSession(chatID int64, from string, bot Bot) *Session {
 	}
 }
 
-func (c *Session) Stop()                          { atomic.StoreInt32(&(c.stopFlag), int32(1)) }
-func (c *Session) IsStop() bool                   { return atomic.LoadInt32(&(c.stopFlag)) != 0 }
-func (c *Session) Token() string                  { return c.token }
-func (c *Session) ChatID() int64                  { return c.chatID }
-func (c *Session) From() string                   { return c.from }
-func (c *Session) SendPlainText(msg string) error { return c.bot.SendPlainText(c.chatID, msg) }
-func (c *Session) SendMarkdown(msg string) error  { return c.bot.SendMarkdown(c.chatID, msg) }
-func (c *Session) Save() error                    { return PutModel(c.Model()) }
+func (c *Session) Stop()         { atomic.StoreInt32(&(c.stopFlag), int32(1)) }
+func (c *Session) IsStop() bool  { return atomic.LoadInt32(&(c.stopFlag)) != 0 }
+func (c *Session) Token() string { return c.token }
+func (c *Session) ChatID() int64 { return c.chatID }
+func (c *Session) From() string  { return c.from }
+func (c *Session) SendPlainText(msg string) error {
+	return c.bot.Send(c.chatID, 0, msg, FormatPlainText)
+}
+func (c *Session) SendMarkdown(msg string) error { return c.bot.Send(c.chatID, 0, msg, FormatMarkdown) }
+func (c *Session) Save() error                   { return PutModel(c.Model()) }
 
 func (c *Session) Handle(msgJson []byte) error {
 	m := make(map[string]interface{})

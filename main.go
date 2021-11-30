@@ -22,28 +22,9 @@ func getTgToken() string {
 	return os.Getenv("TOKEN")
 }
 
-type TgBot struct {
-	bot *tgbotapi.BotAPI
-}
-
-func (b *TgBot) SendPlainText(chatID int64, m string) error {
-	msg := tgbotapi.NewMessage(chatID, m)
-	_, err := b.bot.Send(msg)
-	return err
-}
-
-func (b *TgBot) SendMarkdown(chatID int64, m string) error {
-	msg := tgbotapi.NewMessage(chatID, m)
-	msg.ParseMode = "markdown"
-	_, err := b.bot.Send(msg)
-	return err
-}
-
 func main() {
 	flag.Parse()
-
 	InitDB()
-
 	bot, err := tgbotapi.NewBotAPI(getTgToken())
 	if err != nil {
 		log.Fatal(err)
