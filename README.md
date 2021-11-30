@@ -36,7 +36,7 @@ Request body:
 }
 ```
 
-Example:
+# Example
 
 Add @eve_is_not_a_bot  :)
 
