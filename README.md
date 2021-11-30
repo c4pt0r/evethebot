@@ -40,7 +40,7 @@ Request body:
 ```
 Example:
 
-`$ curl -X GET http://127.0.0.1:8089/message -d '{"token":"{your token}"}' | jq .`
+`$ curl -X GET http://0xffff.me:8089/message -d '{"token":"{your token}"}' | jq .`
 
 # Example
 
