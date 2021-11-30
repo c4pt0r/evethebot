@@ -38,13 +38,13 @@ Request body:
 
 # Example
 
-Add @eve_is_not_a_bot  :)
+Add `@eve_is_not_a_bot` and have a try:)
 
 # So? What can we do?
 
 I put some examples in demo directory.
 
-1. A BTC-USD pricing live broadcast bot (with the help of crontab)
-2. A Hackernews bot, notify you when news appears on the HN front page for a specific keyword.
+1. A BTC-USD pricing live broadcast bot (with the help of crontab) See: [btcprice.py](https://github.com/c4pt0r/evethebot/blob/main/demo/btcprice.py)
+2. A Hackernews bot, notify you when news appears on the HN front page for a specific keyword. See: [hnfilter.py](https://github.com/c4pt0r/evethebot/blob/main/demo/hnfilter.py)
 
 
