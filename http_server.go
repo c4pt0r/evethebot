@@ -81,7 +81,7 @@ func (s *HttpServer) Serve() {
 			return
 		}
 		log.I("Get message for session", sess)
-		msgs := sess.GetMessages(100)
+		msgs := sess.GetMessages(100, req.LastSeenMessageID)
 		if len(msgs) > 0 {
 			c.JSON(200, msgs)
 		}
