@@ -25,6 +25,8 @@ func getTgToken() string {
 func main() {
 	flag.Parse()
 	InitDB()
+
+	log.I("[Success] Init DB")
 	bot, err := tgbotapi.NewBotAPI(getTgToken())
 	if err != nil {
 		log.Fatal(err)
