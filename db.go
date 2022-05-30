@@ -18,7 +18,7 @@ import (
 
 var (
 	dbPath   = flag.String("db", ".eve.db", "db path, using sqlite, for debugging only")
-	mysqlDSN = flag.String("mysql", "", "mysql dsn")
+	mysqlDSN = flag.String("mysql", "root:@tcp(127.0.0.1:4000)/test?parseTime=true", "tidb(mysql) dsn")
 )
 
 var (

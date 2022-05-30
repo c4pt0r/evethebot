@@ -66,7 +66,7 @@ func (c *Session) Handle(msgJson []byte) error {
 		} else if msg == "/help" {
 			err = c.onUsage()
 		} else {
-			c.SendPlainText("OK")
+			c.SendPlainText("Unknown command: " + msg + "\nTry /help")
 		}
 	}
 	c.lastUpdate = time.Now()
@@ -91,10 +91,6 @@ func (c *Session) GetMessages(limit int, offset int) []MessageModel {
 	return msgs.([]MessageModel)
 }
 
-func (c *Session) onWeather() error {
-	return c.SendPlainText("☀️⛈️❄️")
-}
-
 func (c *Session) onGetToken() error {
 	usageStr := fmt.Sprintf(`curl -X POST `+*advisoryAddr+`/post `+
 		`-d '{"token":"%s","msg":"*Hello* World"}'`, c.Token())
@@ -103,7 +99,7 @@ func (c *Session) onGetToken() error {
 }
 
 func (c *Session) onUsage() error {
-	return c.SendPlainText("Usage: /token")
+	return c.SendPlainText("Usage: /token /start /to /help")
 }
 
 func (c *Session) putMessage(messageID int64, text string, messageBody []byte) error {

@@ -27,11 +27,18 @@ type GetMessageReq struct {
 	LastSeenMessageID int    `json:"last_message_id"`
 }
 
-type HttpServer struct {
-	sm *SessionMgr
+type BeeRegisterReq struct {
+	BeeName           string `json:"bee_name"`
+	InstanceID        string `json:"instance_id"`
+	HeartbeatDuration int    `json:"heartbeat_duration"`
 }
 
-func parseReq[T PostMessageReq | GetMessageReq](c *gin.Context) (*T, error) {
+type HttpServer struct {
+	sm   *SessionMgr
+	hive *Hive
+}
+
+func parseReq[T PostMessageReq | GetMessageReq | BeeRegisterReq](c *gin.Context) (*T, error) {
 	req := new(T)
 	jsonData, err := ioutil.ReadAll(c.Request.Body)
 	if err != nil {
@@ -45,12 +52,14 @@ func parseReq[T PostMessageReq | GetMessageReq](c *gin.Context) (*T, error) {
 }
 
 func NewHttpServer(sm *SessionMgr) *HttpServer {
-	return &HttpServer{sm}
+	return &HttpServer{
+		sm:   sm,
+		hive: NewHive(),
+	}
 }
 
 func (s *HttpServer) Serve() {
 	router := gin.Default()
-
 	router.POST("/post", func(c *gin.Context) {
 		req, err := parseReq[PostMessageReq](c)
 		if err != nil {
@@ -82,5 +91,61 @@ func (s *HttpServer) Serve() {
 			c.JSON(200, msgs)
 		}
 	})
+
+	router.PUT("/bees/register", func(c *gin.Context) {
+		req, err := parseReq[BeeRegisterReq](c)
+		if err != nil {
+			c.AbortWithError(500, err)
+			return
+		}
+		bee := NewBee(s.hive, req.BeeName, req.InstanceID, req.HeartbeatDuration)
+		err = s.hive.AddBee(bee)
+		if err != nil {
+			c.AbortWithError(500, err)
+			return
+		}
+		c.JSON(200, gin.H{
+			"msg": "ok",
+		})
+	})
+
+	router.GET("/bees/list", func(c *gin.Context) {
+		c.JSON(200, s.hive.AllBees())
+	})
+
+	router.GET("/bee/instance/:instance", func(c *gin.Context) {
+		instance := c.Param("instance")
+		bee := s.hive.Bee(instance)
+		if bee == nil {
+			c.AbortWithError(404, errors.New("no such bee"))
+			return
+		}
+		c.JSON(200, bee)
+
+	})
+
+	router.GET("/bee/name/:name", func(c *gin.Context) {
+		name := c.Param("name")
+		bees := s.hive.BeesByName(name)
+		if bees == nil {
+			c.AbortWithError(404, errors.New("no such bee"))
+			return
+		}
+		c.JSON(200, bees)
+	})
+
+	router.GET("/bee/heartbeat/:instance", func(c *gin.Context) {
+		instance := c.Param("instance")
+		bee := s.hive.Bee(instance)
+		if bee == nil {
+			c.AbortWithError(404, errors.New("no such bee"))
+			return
+		}
+		bee.UpdateHeartbeat()
+		c.JSON(200, gin.H{
+			"msg": "ok",
+		})
+	})
+
 	router.Run(*httpServerAddr)
 }
