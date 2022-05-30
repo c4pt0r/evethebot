@@ -31,11 +31,7 @@ type HttpServer struct {
 	sm *SessionMgr
 }
 
-type Req interface {
-	type PostMessageReq, GetMessageReq
-}
-
-func parseReq[T Req](c *gin.Context) (*T, error) {
+func parseReq[T PostMessageReq | GetMessageReq](c *gin.Context) (*T, error) {
 	req := new(T)
 	jsonData, err := ioutil.ReadAll(c.Request.Body)
 	if err != nil {
