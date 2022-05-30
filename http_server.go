@@ -34,8 +34,7 @@ type BeeRegisterReq struct {
 }
 
 type HttpServer struct {
-	sm   *SessionMgr
-	hive *Hive
+	sm *SessionMgr
 }
 
 func parseReq[T PostMessageReq | GetMessageReq | BeeRegisterReq](c *gin.Context) (*T, error) {
@@ -53,8 +52,7 @@ func parseReq[T PostMessageReq | GetMessageReq | BeeRegisterReq](c *gin.Context)
 
 func NewHttpServer(sm *SessionMgr) *HttpServer {
 	return &HttpServer{
-		sm:   sm,
-		hive: NewHive(),
+		sm: sm,
 	}
 }
 
@@ -92,14 +90,14 @@ func (s *HttpServer) Serve() {
 		}
 	})
 
-	router.PUT("/bees/register", func(c *gin.Context) {
+	router.POST("/bees/register", func(c *gin.Context) {
 		req, err := parseReq[BeeRegisterReq](c)
 		if err != nil {
 			c.AbortWithError(500, err)
 			return
 		}
-		bee := NewBee(s.hive, req.BeeName, req.InstanceID, req.HeartbeatDuration)
-		err = s.hive.AddBee(bee)
+		bee := NewBee(s.sm.hive, req.BeeName, req.InstanceID, req.HeartbeatDuration)
+		err = s.sm.hive.AddBee(bee)
 		if err != nil {
 			c.AbortWithError(500, err)
 			return
@@ -110,12 +108,12 @@ func (s *HttpServer) Serve() {
 	})
 
 	router.GET("/bees/list", func(c *gin.Context) {
-		c.JSON(200, s.hive.AllBees())
+		c.JSON(200, s.sm.hive.AllBees())
 	})
 
 	router.GET("/bee/instance/:instance", func(c *gin.Context) {
 		instance := c.Param("instance")
-		bee := s.hive.Bee(instance)
+		bee := s.sm.hive.Bee(instance)
 		if bee == nil {
 			c.AbortWithError(404, errors.New("no such bee"))
 			return
@@ -126,7 +124,7 @@ func (s *HttpServer) Serve() {
 
 	router.GET("/bee/name/:name", func(c *gin.Context) {
 		name := c.Param("name")
-		bees := s.hive.BeesByName(name)
+		bees := s.sm.hive.BeesByName(name)
 		if bees == nil {
 			c.AbortWithError(404, errors.New("no such bee"))
 			return
@@ -136,7 +134,7 @@ func (s *HttpServer) Serve() {
 
 	router.GET("/bee/heartbeat/:instance", func(c *gin.Context) {
 		instance := c.Param("instance")
-		bee := s.hive.Bee(instance)
+		bee := s.sm.hive.Bee(instance)
 		if bee == nil {
 			c.AbortWithError(404, errors.New("no such bee"))
 			return

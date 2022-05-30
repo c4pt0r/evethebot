@@ -60,7 +60,7 @@ func main() {
 		// get session by chat id, if not exists create one
 		sess, ok := sm.GetSessionByChatID(chatID)
 		if !ok {
-			sess = NewSession(chatID, update.Message.From.UserName, botWrapper)
+			sess = NewSession(sm, chatID, update.Message.From.UserName, botWrapper)
 			sm.PutSession(sess)
 		}
 		var msg []byte

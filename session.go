@@ -22,9 +22,11 @@ type Session struct {
 	bot        Bot
 	createAt   time.Time
 	lastUpdate time.Time
+
+	sm *SessionMgr
 }
 
-func NewSession(chatID int64, from string, bot Bot) *Session {
+func NewSession(sm *SessionMgr, chatID int64, from string, bot Bot) *Session {
 	u := uuid.New()
 	token := u.String()
 	return &Session{
@@ -35,6 +37,7 @@ func NewSession(chatID int64, from string, bot Bot) *Session {
 		bot:        bot,
 		createAt:   time.Now(),
 		lastUpdate: time.Now(),
+		sm:         sm,
 	}
 }
 
@@ -65,6 +68,8 @@ func (c *Session) Handle(msgJson []byte) error {
 			err = c.onGetToken()
 		} else if msg == "/help" {
 			err = c.onUsage()
+		} else if msg == "/bees" {
+			err = c.onGetBees()
 		} else {
 			c.SendPlainText("Unknown command: " + msg + "\nTry /help")
 		}
@@ -91,17 +96,6 @@ func (c *Session) GetMessages(limit int, offset int) []MessageModel {
 	return msgs.([]MessageModel)
 }
 
-func (c *Session) onGetToken() error {
-	usageStr := fmt.Sprintf(`curl -X POST `+*advisoryAddr+`/post `+
-		`-d '{"token":"%s","msg":"*Hello* World"}'`, c.Token())
-	reply := fmt.Sprintf("Your Token:\n"+c.Token()+"\nPlease don't share...😈\nHave a try:\n  %s", usageStr)
-	return c.SendPlainText(reply)
-}
-
-func (c *Session) onUsage() error {
-	return c.SendPlainText("Usage: /token /start /to /help")
-}
-
 func (c *Session) putMessage(messageID int64, text string, messageBody []byte) error {
 	mm := &MessageModel{
 		ChatID:      c.chatID,
@@ -125,62 +119,26 @@ func (s *Session) Model() *SessionModel {
 	}
 }
 
-type SessionMgr struct {
-	bot     Bot
-	updateQ chan *Session
+func (c *Session) onGetToken() error {
+	usageStr := fmt.Sprintf(`curl -X POST `+*advisoryAddr+`/post `+
+		`-d '{"token":"%s","msg":"*Hello* World"}'`, c.Token())
+	reply := fmt.Sprintf("Your Token:\n"+c.Token()+"\nPlease don't share...😈\nHave a try:\n  %s", usageStr)
+	return c.SendPlainText(reply)
 }
 
-func NewSessionManager(bot Bot) *SessionMgr {
-	mgr := &SessionMgr{
-		bot:     bot,
-		updateQ: make(chan *Session, 100),
+func (c *Session) onUsage() error {
+	return c.SendPlainText("Usage: /token /start /bees /help")
+}
+
+func (c *Session) onGetBees() error {
+	bees := c.sm.hive.AllBees()
+	if len(bees) == 0 {
+		return c.SendPlainText("No bees found")
 	}
-	go mgr.updateSessionWorker()
-	return mgr
-}
-
-func (sm *SessionMgr) sessionModelToSessionObj(model *SessionModel) *Session {
-	return &Session{
-		chatID:     model.ChatID,
-		from:       model.From,
-		token:      model.Token,
-		createAt:   model.CreateAt,
-		lastUpdate: model.LastUpdateAt,
-		bot:        sm.bot,
+	var buf bytes.Buffer
+	for _, b := range bees {
+		buf.WriteString(fmt.Sprintf("%s:%s\n", b.BeeName, b.InstanceID))
+		buf.WriteString(fmt.Sprintf("last heartbeat: %s\n", b.GetLastHeartbeat()))
 	}
-}
-
-func (sm *SessionMgr) PutSession(s *Session) error {
-	return PutModel(s.Model())
-}
-
-func (sm *SessionMgr) GetSessionByToken(token string) (*Session, bool) {
-	var model SessionModel
-	DB().First(&model, "token = ?", token)
-	if DB().Error != nil {
-		return nil, false
-	}
-	return sm.sessionModelToSessionObj(&model), true
-}
-
-func (sm *SessionMgr) GetSessionByChatID(chatID int64) (*Session, bool) {
-	var model SessionModel
-	db := DB().First(&model, "chat_id = ?", chatID)
-	if db.Error != nil {
-		return nil, false
-	}
-	return sm.sessionModelToSessionObj(&model), true
-}
-
-func (sm *SessionMgr) AddToUpdateQueue(s *Session) {
-	// TODO may block
-	sm.updateQ <- s
-}
-
-func (sm *SessionMgr) updateSessionWorker() {
-	// TODO use batch
-	for s := range sm.updateQ {
-		log.D("save session")
-		s.Save()
-	}
+	return c.SendPlainText(buf.String())
 }

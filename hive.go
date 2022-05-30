@@ -16,8 +16,8 @@ type Bee struct {
 	HeartbeatDuration int    `json:"heartbeat_duration"`
 
 	mu            sync.RWMutex
-	lastHeartbeat time.Time
 	h             *Hive
+	lastHeartbeat time.Time
 }
 
 type Hive struct {
@@ -116,6 +116,13 @@ func (b *Bee) UpdateHeartbeat() {
 	defer b.mu.Unlock()
 
 	b.lastHeartbeat = time.Now()
+}
+
+func (b *Bee) GetLastHeartbeat() time.Time {
+	b.mu.RLock()
+	defer b.mu.RUnlock()
+
+	return b.lastHeartbeat
 }
 
 func (b *Bee) Kill() {
