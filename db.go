@@ -9,7 +9,6 @@ import (
 	"github.com/c4pt0r/log"
 	_ "github.com/jinzhu/gorm/dialects/sqlite"
 	"gorm.io/driver/mysql"
-	"gorm.io/driver/sqlite"
 	"gorm.io/gorm"
 	"gorm.io/gorm/clause"
 
@@ -68,8 +67,7 @@ func DB() *gorm.DB {
 			log.I("init mysql", *mysqlDSN)
 			_global_db, err = gorm.Open(mysql.Open(*mysqlDSN), &gorm.Config{})
 		} else {
-			log.I("init sqlite", *dbPath)
-			_global_db, err = gorm.Open(sqlite.Open(*dbPath), &gorm.Config{})
+			panic("not support sqlite")
 		}
 		if err != nil {
 			log.Fatal(err)

@@ -2,8 +2,12 @@ package main
 
 import (
 	"errors"
+	"fmt"
 	"sync"
 	"time"
+
+	"github.com/c4pt0r/log"
+	"github.com/c4pt0r/tipubsub"
 )
 
 var (
@@ -24,13 +28,25 @@ type Hive struct {
 	mu            sync.RWMutex
 	bees          map[string][]*Bee
 	beesInstances map[string]*Bee
+
+	hub *tipubsub.Hub
 }
 
 func NewHive() *Hive {
-	return &Hive{
+	h := &Hive{
 		bees:          make(map[string][]*Bee),
 		beesInstances: make(map[string]*Bee),
 	}
+
+	c := tipubsub.DefaultConfig()
+	c.DSN = *mysqlDSN
+
+	var err error
+	h.hub, err = tipubsub.NewHub(c)
+	if err != nil {
+		log.Fatal(err)
+	}
+	return h
 }
 
 func NewBee(hive *Hive, name string, instanceID string, heartbeatDuration int) *Bee {
@@ -53,6 +69,7 @@ func (h *Hive) AddBee(bee *Bee) error {
 
 	h.bees[bee.BeeName] = append(h.bees[bee.BeeName], bee)
 	h.beesInstances[bee.InstanceID] = bee
+	h.hub.Subscribe(bee.InstanceID, bee, tipubsub.LatestId)
 
 	go func(b *Bee) {
 		for {
@@ -111,10 +128,22 @@ func (h *Hive) BeesByName(name string) []*Bee {
 	return h.bees[name]
 }
 
+func (h *Hive) SendToBee(instanceID string, data string) error {
+	h.mu.RLock()
+	defer h.mu.RUnlock()
+
+	bee := h.beesInstances[instanceID]
+	if bee == nil {
+		return errors.New(fmt.Sprintf("bee with instance id %s not found", instanceID))
+	}
+	return bee.h.hub.Publish(bee.InstanceID, &tipubsub.Message{
+		Data: data,
+	})
+}
+
 func (b *Bee) UpdateHeartbeat() {
 	b.mu.Lock()
 	defer b.mu.Unlock()
-
 	b.lastHeartbeat = time.Now()
 }
 
@@ -134,4 +163,16 @@ func (b *Bee) IsTimeout() bool {
 	defer b.mu.RUnlock()
 
 	return time.Now().Sub(b.lastHeartbeat) > 2*time.Duration(b.HeartbeatDuration)*time.Second
+}
+
+var _ tipubsub.Subscriber = (*Bee)(nil)
+
+func (b *Bee) ID() string {
+	return b.InstanceID
+}
+
+func (b *Bee) OnMessages(topic string, msgs []tipubsub.Message) {
+	for _, msg := range msgs {
+		// TODO
+	}
 }

@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"encoding/json"
 	"fmt"
+	"strings"
 	"sync/atomic"
 	"time"
 
@@ -60,18 +61,24 @@ func (c *Session) Handle(msgJson []byte) error {
 
 	var err error
 	data, ok := m["text"]
+
 	if ok {
 		msg := data.(string)
-		if msg == "/start" {
-			err = c.onUsage()
-		} else if msg == "/token" {
-			err = c.onGetToken()
-		} else if msg == "/help" {
-			err = c.onUsage()
-		} else if msg == "/bees" {
-			err = c.onGetBees()
-		} else {
-			c.SendPlainText("Unknown command: " + msg + "\nTry /help")
+		if msg[0] == '/' {
+			cmd := strings.SplitN(msg, " ", 2)[0]
+			if cmd == "/start" {
+				err = c.onUsage()
+			} else if cmd == "/token" {
+				err = c.onGetToken()
+			} else if cmd == "/help" {
+				err = c.onUsage()
+			} else if cmd == "/bees" {
+				err = c.onGetBees()
+			} else if cmd == "/to" {
+				err = c.onToBee(m)
+			} else {
+				c.SendPlainText("Unknown command: " + msg + "\nTry /help")
+			}
 		}
 	}
 	c.lastUpdate = time.Now()
@@ -127,7 +134,7 @@ func (c *Session) onGetToken() error {
 }
 
 func (c *Session) onUsage() error {
-	return c.SendPlainText("Usage: /token /start /bees /help")
+	return c.SendPlainText("Usage: /token /to /bees /help")
 }
 
 func (c *Session) onGetBees() error {
@@ -141,4 +148,21 @@ func (c *Session) onGetBees() error {
 		buf.WriteString(fmt.Sprintf("last heartbeat: %s\n", b.GetLastHeartbeat()))
 	}
 	return c.SendPlainText(buf.String())
+}
+
+func (c *Session) onToBee(m map[string]interface{}) error {
+	data, ok := m["text"]
+	if !ok {
+		return c.SendPlainText("Usage: /to <bee-instance-id> <message>...")
+	}
+	msg := data.(string)
+	args := strings.SplitN(msg, " ", 3)
+	if len(args) != 3 {
+		return c.SendPlainText("Usage: /to <bee-instance-id> <message>...")
+	}
+	beesInstanceID := args[1]
+	if err := c.sm.hive.SendToBee(beesInstanceID, args[2]); err != nil {
+		return c.SendPlainText("Error: " + err.Error())
+	}
+	return c.SendPlainText("Message sent to " + beesInstanceID)
 }

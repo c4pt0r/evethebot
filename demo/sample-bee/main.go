@@ -29,7 +29,7 @@ func randomString(n int) string {
 
 func init() {
 	rand.Seed(time.Now().UnixNano())
-	instanceID = fmt.Sprintf("bee-%s", randomString(5))
+	instanceID = fmt.Sprintf("bee_%s", randomString(5))
 }
 
 var (
