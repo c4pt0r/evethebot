@@ -172,7 +172,5 @@ func (b *Bee) ID() string {
 }
 
 func (b *Bee) OnMessages(topic string, msgs []tipubsub.Message) {
-	for _, msg := range msgs {
-		// TODO
-	}
+	// TODO
 }

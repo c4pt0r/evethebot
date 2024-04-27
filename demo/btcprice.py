@@ -15,17 +15,14 @@ if TOKEN is None:
     print('please set token')
     sys.exit(-1)
 
-f = request.urlopen('https://api.binance.com/api/v3/ticker/24hr?symbol=BTCUSDT')
+f = request.urlopen('https://api.coindesk.com/v1/bpi/currentprice/USD.json')
 body = f.read().decode('utf-8')
 f.close()
 
 res = json.loads(body)
 
-output = '*💰BTC Price (To USDT)*\n\n'
-for k,v in res.items():
-    output += '*' + k + '*' + ': ' + str(v) + '\n'
+float_price = res['bpi']['USD']['rate_float']
 
-payload = {'token': TOKEN, 'msg': output}
-req = request.Request('http://0xffff.me:8089/post', data=json.dumps(payload).encode('utf-8'))
+payload = {'token': TOKEN, 'msg': f"BTC2USD: {float_price}"}
+req = request.Request('http://aws.0xffff.me:8089/post', data=json.dumps(payload).encode('utf-8'))
 request.urlopen(req)
-
